@@ -1,0 +1,47 @@
+const RabbitMQProducer = require('./controllers/RabbitMQProducer');
+const RabbitMQConsumer = require('./controllers/RabbitMQConsumer');
+const messageHandlers = require('./utils/messageHandler');
+const express = require('express');
+const morgan = require('morgan');
+const cors = require('cors');
+const app = express();
+app.use(morgan('dev'));
+app.use(cors());
+const port = 3001;
+
+
+const producer = new RabbitMQProducer("amqp://localhost","node-qeue");
+const consumerStudent = new RabbitMQConsumer(
+  "amqp://localhost",
+  "node-qeue",
+  "student",
+  "student",
+  messageHandlers
+);
+const consumerTeacher = new RabbitMQConsumer(
+  "amqp://localhost",
+  "node-qeue",
+  "teacher",
+  "teacher",
+  messageHandlers
+);
+
+consumerStudent.start();
+consumerTeacher.start();
+
+
+app.get('/send', async (req, res) => {
+    try {
+      const routingKey = req.query.routingKey;
+      const message = req.query.message;
+      producer.sendMessage(routingKey, message);
+      return res.send("Message sent");
+    } catch (err) {
+      return res.status(500).send(err.message);
+    }
+})
+
+
+app.listen(port, () => {
+    console.log(`RabbitMQ listening at http://localhost:${port}`);
+})
